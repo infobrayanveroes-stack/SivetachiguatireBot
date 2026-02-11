@@ -68,9 +68,7 @@ const MENU_TEXT = [
   '0) Volver a menu'
 ].join('\n');
 const GREETING_REPLIES = [
-  'Hola. Soy el bot de Sivetachi Restaurante. En que te puedo ayudar?',
-  'Hola! Bienvenido a Sivetachi Restaurante. Como te ayudo hoy?',
-  'Hola, gracias por escribir. Soy el bot de Sivetachi Restaurante.'
+  'Hola, Soy el bot de sivetachi Restaurante. En que te puedo ayudar?'
 ];
 const DEFAULT_REPLIES = [
   'Gracias por escribir. Escribe "menu" para ver opciones rapidas.',
@@ -542,7 +540,9 @@ module.exports = async (req, res) => {
           state.greeted = true;
           await sendWhatsApp(customerPhone, pickRandomAvoidRepeat(state, GREETING_REPLIES, 'greeting'));
           await sendMenuWithFallback(customerPhone);
-          didSendMenu = true;
+          res.statusCode = 200;
+          res.end('OK');
+          return;
         }
 
         if (!input) {
