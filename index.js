@@ -90,6 +90,18 @@ app.post('/webhook', async (req, res) => {
         return;
       }
 
+      if (!isActiveFlow(state) && interactiveId && isCategoryId(interactiveId)) {
+        await sendCategoryMenu(customerPhone, interactiveId);
+        res.sendStatus(200);
+        return;
+      }
+
+      if (!isActiveFlow(state) && !interactiveId && isCategoryId(input)) {
+        await sendCategoryMenu(customerPhone, input);
+        res.sendStatus(200);
+        return;
+      }
+
       if (interactiveId === '0') {
         await sendMenuWithFallback(customerPhone);
       } else if (interactiveId) {
@@ -157,15 +169,15 @@ function isMenuTrigger(text) {
 }
 
 const MENU_TEXT = [
-  'Menu rapido (responde con el numero):',
-  '1) Menu del dia',
-  '2) Sushi',
-  '3) Hamburguesas',
-  '4) Perros calientes',
-  '5) Pepitos',
-  '6) Delivery',
+  'Menu (responde con el numero o selecciona haciendo click):',
+  '1) Promociones del dia',
+  '2) Recomendaciones de chef',
+  '3) Love sushi',
+  '4) Hamburguesas y parrilla',
+  '5) Perros calientes y pepitos',
+  '6) Sucursales y delivery',
   '7) Reservas',
-  '8) Promos',
+  '8) Promos familiares y combos',
   '9) Horarios',
   '0) Volver a menu'
 ].join('\n');
@@ -177,6 +189,67 @@ const DEFAULT_REPLIES = [
   'Estoy aqui para ayudarte. Escribe "menu" y te muestro opciones.',
   'Quieres ver el menu? Escribe "menu" y te muestro opciones.'
 ];
+
+const MENU_CATEGORY_TITLES = {
+  '1': 'Promociones del dia',
+  '2': 'Recomendaciones de chef',
+  '3': 'Love sushi',
+  '4': 'Hamburguesas y parrilla',
+  '5': 'Perros calientes y pepitos'
+};
+
+const MENU_CATEGORY_ITEMS = {
+  '1': [
+    { id: 'p1', title: 'Promo 2x1 burger', price: 'Bs. 12', description: '2 clasicas + papas' },
+    { id: 'p2', title: 'Combo sushi 24', price: 'Bs. 20', description: '3 rolls surtidos' },
+    { id: 'p3', title: 'Promo hotdog', price: 'Bs. 9', description: '2 perros + bebida' },
+    { id: 'p4', title: 'Parrilla pareja', price: 'Bs. 18', description: 'carne + pollo' },
+    { id: 'p5', title: 'Promo pepito', price: 'Bs. 10', description: 'pepito mixto' }
+  ],
+  '2': [
+    { id: 'c1', title: 'Pollo al limon', price: 'Bs. 9', description: 'arroz y ensalada' },
+    { id: 'c2', title: 'Lomo a la plancha', price: 'Bs. 12', description: 'papas rusticas' },
+    { id: 'c3', title: 'Pasta cremosa', price: 'Bs. 8', description: 'pollo y queso' },
+    { id: 'c4', title: 'Bowl oriental', price: 'Bs. 9', description: 'carne + vegetales' },
+    { id: 'c5', title: 'Wrap especial', price: 'Bs. 7', description: 'pollo crispy' }
+  ],
+  '3': [
+    { id: 's1', title: 'California roll', price: 'Bs. 8', description: '8 piezas' },
+    { id: 's2', title: 'Tempura roll', price: 'Bs. 9', description: '8 piezas' },
+    { id: 's3', title: 'Salmon roll', price: 'Bs. 10', description: '8 piezas' },
+    { id: 's4', title: 'Tropical roll', price: 'Bs. 10', description: '8 piezas' },
+    { id: 's5', title: 'Crispy roll', price: 'Bs. 11', description: '8 piezas' }
+  ],
+  '4': [
+    { id: 'h1', title: 'Hamburguesa clasica', price: 'Bs. 6', description: 'carne y queso' },
+    { id: 'h2', title: 'Doble queso', price: 'Bs. 8', description: 'doble carne' },
+    { id: 'h3', title: 'Pollo crispy', price: 'Bs. 7', description: 'salsa especial' },
+    { id: 'h4', title: 'BBQ burger', price: 'Bs. 9', description: 'tocineta' },
+    { id: 'h5', title: 'Parrilla mixta', price: 'Bs. 14', description: 'carne + pollo' }
+  ],
+  '5': [
+    { id: 'k1', title: 'Perro sencillo', price: 'Bs. 4', description: 'salsas clasicas' },
+    { id: 'k2', title: 'Perro especial', price: 'Bs. 6', description: 'queso y tocineta' },
+    { id: 'k3', title: 'Pepito de pollo', price: 'Bs. 7', description: 'papas y queso' },
+    { id: 'k4', title: 'Pepito de carne', price: 'Bs. 8', description: 'papas y queso' },
+    { id: 'k5', title: 'Pepito mixto', price: 'Bs. 9', description: 'carne y pollo' }
+  ]
+};
+
+function buildCategoryText(categoryId) {
+  const title = MENU_CATEGORY_TITLES[categoryId] || 'Menu';
+  const items = MENU_CATEGORY_ITEMS[categoryId] || [];
+  const lines = items.map((item) => `- ${item.title}: ${item.price}`);
+  return `${title}:\n${lines.join('\n')}`;
+}
+
+const CATEGORY_TEXT = {
+  '1': buildCategoryText('1'),
+  '2': buildCategoryText('2'),
+  '3': buildCategoryText('3'),
+  '4': buildCategoryText('4'),
+  '5': buildCategoryText('5')
+};
 
 const MENU_DIA_TEXT = [
   'Menu del dia (ejemplo):',
@@ -237,24 +310,28 @@ const KEYWORD_RULES = [
     replies: [MENU_TEXT]
   },
   {
-    keywords: ['menu del dia', 'menu dia', 'almuerzo', 'almorzar'],
-    replies: [MENU_DIA_TEXT]
+    keywords: ['promocion', 'promociones', 'promo', 'menu del dia', 'menu dia'],
+    replies: [CATEGORY_TEXT['1']]
+  },
+  {
+    keywords: ['chef', 'recomendacion', 'recomendaciones'],
+    replies: [CATEGORY_TEXT['2']]
   },
   {
     keywords: ['sushi', 'maki', 'makis', 'roll', 'rolls', 'salmon', 'tempura'],
-    replies: [SUSHI_TEXT]
+    replies: [CATEGORY_TEXT['3']]
   },
   {
     keywords: ['hamburguesa', 'hamburguesas', 'burger', 'burgers', 'hamb'],
-    replies: [BURGER_TEXT]
+    replies: [CATEGORY_TEXT['4']]
   },
   {
     keywords: ['perro', 'perros', 'perro caliente', 'perros calientes', 'hot dog', 'hotdog'],
-    replies: [HOTDOG_TEXT]
+    replies: [CATEGORY_TEXT['5']]
   },
   {
     keywords: ['pepito', 'pepitos'],
-    replies: [PEPITO_TEXT]
+    replies: [CATEGORY_TEXT['5']]
   },
   {
     keywords: ['carta', 'platos', 'comida', 'parrilla', 'pasta', 'pizza', 'postre'],
@@ -298,7 +375,7 @@ const KEYWORD_RULES = [
   },
   {
     keywords: ['promo', 'promos', 'promocion', 'promociones', 'oferta', 'ofertas'],
-    replies: ['Tenemos promos activas. Dime si prefieres combos, bebidas o postres.']
+    replies: [CATEGORY_TEXT['1']]
   },
   {
     keywords: ['cumple', 'cumpleanos', 'evento', 'eventos', 'grupo'],
@@ -354,6 +431,10 @@ function getUserState(phone) {
       awaitingService: false,
       awaitingAddress: false,
       awaitingPaymentConfirm: false,
+      awaitingItemQuantity: false,
+      awaitingItemExtras: false,
+      selectedItem: null,
+      selectedItemQty: 0,
       orderText: '',
       serviceType: '',
       lastReplies: {}
@@ -367,8 +448,41 @@ function resetOrderFlow(state) {
   state.awaitingService = false;
   state.awaitingAddress = false;
   state.awaitingPaymentConfirm = false;
+  state.awaitingItemQuantity = false;
+  state.awaitingItemExtras = false;
+  state.selectedItem = null;
+  state.selectedItemQty = 0;
   state.orderText = '';
   state.serviceType = '';
+}
+
+function isCategoryId(value) {
+  return ['1', '2', '3', '4', '5'].includes(value);
+}
+
+function isActiveFlow(state) {
+  return state.awaitingOrder
+    || state.awaitingService
+    || state.awaitingAddress
+    || state.awaitingPaymentConfirm
+    || state.awaitingReservation
+    || state.awaitingDelivery
+    || state.awaitingItemQuantity
+    || state.awaitingItemExtras;
+}
+
+function getItemFromInteractiveId(interactiveId) {
+  if (!interactiveId || !interactiveId.startsWith('item-')) {
+    return null;
+  }
+  const parts = interactiveId.split('-');
+  if (parts.length < 3) {
+    return null;
+  }
+  const categoryId = parts[1];
+  const itemId = parts.slice(2).join('-');
+  const items = MENU_CATEGORY_ITEMS[categoryId] || [];
+  return items.find((item) => item.id === itemId) || null;
 }
 
 function isYes(text) {
@@ -433,42 +547,23 @@ function getKeywordReply(userInput, state) {
     return MENU_TEXT;
   }
 
-  if (['1', '2', '3', '4', '5', '6', '7', '8', '9'].includes(text)) {
-    if (text === '1') {
-      state.awaitingOrder = true;
-      return withMenuFooter(`${MENU_DIA_TEXT}\n\nQue deseas pedir? Indica platos y cantidades.`);
-    }
-    if (text === '2') {
-      state.awaitingOrder = true;
-      return withMenuFooter(`${SUSHI_TEXT}\n\nQue deseas pedir? Indica platos y cantidades.`);
-    }
-    if (text === '3') {
-      state.awaitingOrder = true;
-      return withMenuFooter(`${BURGER_TEXT}\n\nQue deseas pedir? Indica platos y cantidades.`);
-    }
-    if (text === '4') {
-      state.awaitingOrder = true;
-      return withMenuFooter(`${HOTDOG_TEXT}\n\nQue deseas pedir? Indica platos y cantidades.`);
-    }
-    if (text === '5') {
-      state.awaitingOrder = true;
-      return withMenuFooter(`${PEPITO_TEXT}\n\nQue deseas pedir? Indica platos y cantidades.`);
-    }
-    if (text === '6') {
-      state.awaitingDelivery = true;
-      return withDialogEnd('Para delivery dime tu zona y direccion aproximada.');
-    }
-    if (text === '7') {
-      state.awaitingReservation = true;
-      return withDialogEnd('Perfecto. Para reservar dime fecha, hora y cantidad de personas.');
-    }
-    if (text === '8') {
-      return withDialogEnd('Tenemos promos activas. Dime si prefieres combos, bebidas o postres.');
-    }
-    if (text === '9') {
-      return withDialogEnd('Horario: lunes a jueves 12:00 a 22:00. Viernes y sabado 12:00 a 23:00. Domingo 12:00 a 20:00.');
-    }
-    return withDialogEnd('Estamos en Guatire. Si quieres, te envio la ubicacion exacta.');
+  if (['1', '2', '3', '4', '5'].includes(text)) {
+    state.awaitingOrder = true;
+    return withMenuFooter(`${CATEGORY_TEXT[text]}\n\nQue deseas pedir? Indica platos y cantidades.`);
+  }
+  if (text === '6') {
+    state.awaitingDelivery = true;
+    return withDialogEnd('Para delivery dime tu zona y direccion aproximada.');
+  }
+  if (text === '7') {
+    state.awaitingReservation = true;
+    return withDialogEnd('Perfecto. Para reservar dime fecha, hora y cantidad de personas.');
+  }
+  if (text === '8') {
+    return withDialogEnd('Tenemos promos familiares y combos. Dime cuantas personas son.');
+  }
+  if (text === '9') {
+    return withDialogEnd('Horario: lunes a jueves 12:00 a 22:00. Viernes y sabado 12:00 a 23:00. Domingo 12:00 a 20:00.');
   }
 
   for (let index = 0; index < KEYWORD_RULES.length; index += 1) {
@@ -502,6 +597,37 @@ async function getBotReply(phone, userInput) {
   if (normalizedInput === 'menu' || normalizedInput === '0') {
     resetOrderFlow(state);
     return MENU_TEXT;
+  }
+
+  const selectedItem = getItemFromInteractiveId(userInput);
+  if (selectedItem) {
+    state.selectedItem = selectedItem;
+    state.awaitingItemQuantity = true;
+    return `Cuantas unidades de ${selectedItem.title}?`;
+  }
+
+  if (state.awaitingItemQuantity) {
+    const qty = Number.parseInt(normalizedInput, 10);
+    if (!Number.isFinite(qty) || qty < 1 || qty > 20) {
+      return 'Indica una cantidad valida (1-20).';
+    }
+    state.selectedItemQty = qty;
+    state.awaitingItemQuantity = false;
+    state.awaitingItemExtras = true;
+    return 'Quieres extras o notas? Responde no si no.';
+  }
+
+  if (state.awaitingItemExtras) {
+    const item = state.selectedItem;
+    const qty = state.selectedItemQty || 1;
+    const extras = isNo(userInput) ? '' : userInput.trim();
+    const extrasText = extras ? ` Extras: ${extras}.` : '';
+    if (item) {
+      state.orderText = `${qty}x ${item.title} - ${item.price}.${extrasText}`;
+    }
+    state.awaitingItemExtras = false;
+    state.awaitingService = true;
+    return `Perfecto. Anoto tu pedido: ${state.orderText || 'Pedido recibido'}.\n\n${SERVICE_PROMPT}`;
   }
 
   if (state.awaitingOrder) {
@@ -613,6 +739,48 @@ async function sendMenuWithFallback(to) {
   }
 }
 
+async function sendCategoryMenu(to, categoryId) {
+  const title = MENU_CATEGORY_TITLES[categoryId];
+  const items = MENU_CATEGORY_ITEMS[categoryId] || [];
+  if (!title || items.length === 0) {
+    await sendWhatsApp(to, 'No tengo platos en esa categoria.');
+    return;
+  }
+
+  await axios.post(`https://graph.facebook.com/v18.0/${PHONE_NUMBER_ID}/messages`, {
+    messaging_product: 'whatsapp',
+    to,
+    type: 'interactive',
+    interactive: {
+      type: 'list',
+      header: { type: 'text', text: title },
+      body: { text: 'Elige un plato:' },
+      footer: { text: 'Sivetachi Restaurante' },
+      action: {
+        button: 'Ver platos',
+        sections: [
+          {
+            title: title,
+            rows: items.map((item) => ({
+              id: `item-${categoryId}-${item.id}`,
+              title: item.title,
+              description: `${item.price} - ${item.description}`
+            }))
+          },
+          {
+            title: 'Otros',
+            rows: [
+              { id: '0', title: 'Volver a menu' }
+            ]
+          }
+        ]
+      }
+    }
+  }, {
+    headers: { Authorization: `Bearer ${WA_TOKEN}` }
+  });
+}
+
 async function sendInteractiveMenu(to) {
   await axios.post(`https://graph.facebook.com/v18.0/${PHONE_NUMBER_ID}/messages`, {
     messaging_product: 'whatsapp',
@@ -629,14 +797,14 @@ async function sendInteractiveMenu(to) {
           {
             title: 'Categorias',
             rows: [
-              { id: '1', title: 'Menu del dia' },
-              { id: '2', title: 'Sushi' },
-              { id: '3', title: 'Hamburguesas' },
-              { id: '4', title: 'Perros calientes' },
-              { id: '5', title: 'Pepitos' },
-              { id: '6', title: 'Delivery' },
+              { id: '1', title: 'Promociones del dia' },
+              { id: '2', title: 'Recomendaciones de chef' },
+              { id: '3', title: 'Love sushi' },
+              { id: '4', title: 'Hamburguesas y parrilla' },
+              { id: '5', title: 'Perros calientes y pepitos' },
+              { id: '6', title: 'Sucursales y delivery' },
               { id: '7', title: 'Reservas' },
-              { id: '8', title: 'Promos' },
+              { id: '8', title: 'Promos familiares y combos' },
               { id: '9', title: 'Horarios' }
             ]
           },
