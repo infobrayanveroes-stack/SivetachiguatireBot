@@ -68,7 +68,7 @@ const MENU_TEXT = [
   '5) Perros calientes y pepitos',
   '6) Sucursales y delivery',
   '7) Reservas',
-  '8) Promos familiares y combos',
+  '8) Promos familiares',
   '9) Horarios'
 ].join('\n');
 const GREETING_REPLIES = [
@@ -649,7 +649,7 @@ async function sendInteractiveMenu(to) {
               { id: '5', title: 'Perros calientes y pepitos' },
               { id: '6', title: 'Sucursales y delivery' },
               { id: '7', title: 'Reservas' },
-              { id: '8', title: 'Promos familiares y combos' },
+              { id: '8', title: 'Promos familiares' },
               { id: '9', title: 'Horarios' }
             ]
           },
