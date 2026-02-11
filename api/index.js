@@ -64,7 +64,6 @@ const MENU_TEXT = [
   '7) Reservas',
   '8) Promos',
   '9) Horarios',
-  '10) Ubicacion',
   '0) Volver a menu'
 ].join('\n');
 const GREETING_REPLIES = [
@@ -457,8 +456,7 @@ async function sendInteractiveMenu(to) {
               { id: '6', title: 'Delivery' },
               { id: '7', title: 'Reservas' },
               { id: '8', title: 'Promos' },
-              { id: '9', title: 'Horarios' },
-              { id: '10', title: 'Ubicacion' }
+              { id: '9', title: 'Horarios' }
             ]
           },
           {
