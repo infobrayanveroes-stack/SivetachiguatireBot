@@ -109,12 +109,16 @@ const KEYWORD_RULES = [
     reply: 'Hola. Soy el bot de Sivetachi. En que te puedo ayudar?'
   },
   {
-    keywords: ['menu', 'opciones', 'ayuda'],
-    reply: 'Opciones: 1) Precios 2) Horarios 3) Ubicacion 4) Envio 5) Catalogo 6) Agendar. Responde con el numero o la palabra.'
+    keywords: ['menu', 'opciones', 'ayuda', 'info', 'informacion'],
+    reply: 'Menu rapido: 1) Precios 2) Horarios 3) Ubicacion 4) Catalogo 5) Agendar 6) Hablar con asesor.'
   },
   {
     keywords: ['precio', 'precios', 'costo', 'costos', 'valor', 'tarifa'],
-    reply: 'Precios base: Diagnostico $10, Servicio basico $25, Premium $45. Dime cual te interesa.'
+    reply: 'Tenemos planes y precios segun el servicio. Dime que necesitas y te paso la info.'
+  },
+  {
+    keywords: ['cotizacion', 'cotizar', 'presupuesto'],
+    reply: 'Con gusto. Dime que servicio necesitas y te preparo una cotizacion.'
   },
   {
     keywords: ['horario', 'horarios', 'abren', 'abierto', 'cierran', 'cerrado'],
@@ -122,7 +126,15 @@ const KEYWORD_RULES = [
   },
   {
     keywords: ['ubicacion', 'direccion', 'donde estan', 'donde quedan'],
-    reply: 'Estamos en Guatire, Edo. Miranda. Si quieres, te envio la ubicacion exacta por aqui.'
+    reply: 'Estamos en Guatire. Si quieres, te envio la ubicacion exacta por aqui.'
+  },
+  {
+    keywords: ['pago', 'pagos', 'transferencia', 'zelle', 'efectivo'],
+    reply: 'Aceptamos transferencia, Zelle y efectivo. Dime que metodo prefieres.'
+  },
+  {
+    keywords: ['garantia', 'garantias'],
+    reply: 'Ofrecemos garantia segun el servicio. Dime cual necesitas y te explico los terminos.'
   },
   {
     keywords: ['envio', 'entrega', 'delivery'],
@@ -130,35 +142,23 @@ const KEYWORD_RULES = [
   },
   {
     keywords: ['catalogo', 'productos', 'servicios'],
-    reply: 'Servicios: Diagnostico, Mantenimiento, Instalacion, Soporte remoto. Dime cual necesitas.'
+    reply: 'Tenemos varios servicios. Dime que buscas y te paso el catalogo.'
   },
   {
     keywords: ['agendar', 'cita', 'reservar'],
     reply: 'Claro, dime que dia y hora te conviene y lo agendamos.'
   },
   {
-    keywords: ['1', 'precios'],
-    reply: 'Precios base: Diagnostico $10, Servicio basico $25, Premium $45. Quieres detalles?'
+    keywords: ['asesor', 'humano', 'operador', 'atencion'],
+    reply: 'Te paso con un asesor. Por favor deja tu nombre y un resumen de lo que necesitas.'
   },
   {
-    keywords: ['2', 'horarios'],
-    reply: 'Horario: Lunes a viernes 9-18. Sabado 9-13.'
+    keywords: ['reclamo', 'queja', 'problema', 'soporte'],
+    reply: 'Lamento el inconveniente. Describe el problema y un asesor te ayudara.'
   },
   {
-    keywords: ['3', 'ubicacion'],
-    reply: 'Estamos en Guatire. Si quieres, te envio la ubicacion exacta.'
-  },
-  {
-    keywords: ['4', 'envio'],
-    reply: 'Hacemos entregas. Dime tu zona.'
-  },
-  {
-    keywords: ['5', 'catalogo'],
-    reply: 'Servicios: Diagnostico, Mantenimiento, Instalacion, Soporte remoto.'
-  },
-  {
-    keywords: ['6', 'agendar'],
-    reply: 'Indica dia y hora para agendar.'
+    keywords: ['promocion', 'promociones', 'oferta', 'ofertas'],
+    reply: 'Tenemos promos activas esta semana. Dime que servicio te interesa y te doy detalles.'
   },
   {
     keywords: ['gracias', 'ok', 'perfecto', 'listo'],
@@ -175,7 +175,7 @@ function getKeywordReply(userInput) {
     }
   }
 
-  return 'Gracias por escribir. Por favor dime en que puedo ayudarte.';
+  return 'Gracias por escribir. Escribe "menu" para ver opciones rapidas.';
 }
 
 async function sendWhatsApp(to, text) {
