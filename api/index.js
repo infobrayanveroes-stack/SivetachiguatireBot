@@ -366,7 +366,6 @@ async function getBotReply(phone, userInput) {
 
   if (!state.greeted) {
     state.greeted = true;
-    return `${pickRandomAvoidRepeat(state, GREETING_REPLIES, 'greeting')}\n${MENU_TEXT}`;
   }
 
   if (state.handoff) {
@@ -456,7 +455,8 @@ async function sendInteractiveMenu(to) {
               { id: '7', title: 'Reservas' },
               { id: '8', title: 'Promos' },
               { id: '9', title: 'Horarios' },
-              { id: '10', title: 'Ubicacion' }
+              { id: '10', title: 'Ubicacion' },
+              { id: '0', title: 'Volver a menu' }
             ]
           }
         ]
@@ -519,6 +519,16 @@ module.exports = async (req, res) => {
         addChatEvent({ direction: 'in', phone: customerPhone, text: customerMsg });
 
         if (isBotEnabled) {
+          const state = getUserState(customerPhone);
+          if (!state.greeted) {
+            state.greeted = true;
+            await sendWhatsApp(customerPhone, pickRandomAvoidRepeat(state, GREETING_REPLIES, 'greeting'));
+            await sendInteractiveMenu(customerPhone);
+            res.statusCode = 200;
+            res.end('OK');
+            return;
+          }
+
           if (interactiveId) {
             const response = await getBotReply(customerPhone, interactiveId);
             await sendWhatsApp(customerPhone, response);
