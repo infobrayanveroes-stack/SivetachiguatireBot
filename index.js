@@ -25,6 +25,12 @@ const AI_ENABLED = String(process.env.AI_ENABLED || '').toLowerCase() === 'true'
 const AI_PROVIDER = (process.env.AI_PROVIDER || 'openai').toLowerCase();
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const openai = OPENAI_API_KEY ? new OpenAI({ apiKey: OPENAI_API_KEY }) : null;
+const PAYMENT_MOBILE_TEXT = process.env.PAYMENT_MOBILE_TEXT || 'Pago movil: Banco ___, Cedula ___, Telefono ___.';
+
+const SERVICE_PROMPT = 'Es delivery, para comer en tienda o para llevar? Escribe: delivery, tienda o para llevar.';
+const ADDRESS_PROMPT = 'Indica tu zona, direccion y referencia.';
+const TIME_PROMPT = 'Para comer en tienda o retirar, dime la hora aproximada.';
+const PAYMENT_PROMPT = 'Quieres pagar ahora por pago movil? Responde si o no.';
 
 const chatHistory = [];
 let isBotEnabled = true;
@@ -344,10 +350,35 @@ function getUserState(phone) {
       handoff: false,
       awaitingReservation: false,
       awaitingDelivery: false,
+      awaitingOrder: false,
+      awaitingService: false,
+      awaitingAddress: false,
+      awaitingPaymentConfirm: false,
+      orderText: '',
+      serviceType: '',
       lastReplies: {}
     });
   }
   return userStates.get(phone);
+}
+
+function resetOrderFlow(state) {
+  state.awaitingOrder = false;
+  state.awaitingService = false;
+  state.awaitingAddress = false;
+  state.awaitingPaymentConfirm = false;
+  state.orderText = '';
+  state.serviceType = '';
+}
+
+function isYes(text) {
+  const normalized = normalizeText(text);
+  return ['si', 'sí', 'ok', 'dale', 'pagar', 'pago', 'pagar ahora'].includes(normalized);
+}
+
+function isNo(text) {
+  const normalized = normalizeText(text);
+  return ['no', 'luego', 'despues', 'más tarde', 'mas tarde'].includes(normalized);
 }
 
 function getLocalTimeParts() {
@@ -402,21 +433,26 @@ function getKeywordReply(userInput, state) {
     return MENU_TEXT;
   }
 
-  if (['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'].includes(text)) {
+  if (['1', '2', '3', '4', '5', '6', '7', '8', '9'].includes(text)) {
     if (text === '1') {
-      return withMenuFooter(MENU_DIA_TEXT);
+      state.awaitingOrder = true;
+      return withMenuFooter(`${MENU_DIA_TEXT}\n\nQue deseas pedir? Indica platos y cantidades.`);
     }
     if (text === '2') {
-      return withMenuFooter(SUSHI_TEXT);
+      state.awaitingOrder = true;
+      return withMenuFooter(`${SUSHI_TEXT}\n\nQue deseas pedir? Indica platos y cantidades.`);
     }
     if (text === '3') {
-      return withMenuFooter(BURGER_TEXT);
+      state.awaitingOrder = true;
+      return withMenuFooter(`${BURGER_TEXT}\n\nQue deseas pedir? Indica platos y cantidades.`);
     }
     if (text === '4') {
-      return withMenuFooter(HOTDOG_TEXT);
+      state.awaitingOrder = true;
+      return withMenuFooter(`${HOTDOG_TEXT}\n\nQue deseas pedir? Indica platos y cantidades.`);
     }
     if (text === '5') {
-      return withMenuFooter(PEPITO_TEXT);
+      state.awaitingOrder = true;
+      return withMenuFooter(`${PEPITO_TEXT}\n\nQue deseas pedir? Indica platos y cantidades.`);
     }
     if (text === '6') {
       state.awaitingDelivery = true;
@@ -457,9 +493,56 @@ function getKeywordReply(userInput, state) {
 
 async function getBotReply(phone, userInput) {
   const state = getUserState(phone);
+  const normalizedInput = normalizeText(userInput);
 
   if (state.handoff) {
     return 'Un asesor te atendera en breve. Si quieres agregar algo, escribelo aqui.';
+  }
+
+  if (normalizedInput === 'menu' || normalizedInput === '0') {
+    resetOrderFlow(state);
+    return MENU_TEXT;
+  }
+
+  if (state.awaitingOrder) {
+    state.orderText = userInput.trim();
+    state.awaitingOrder = false;
+    state.awaitingService = true;
+    return `Perfecto. Anoto tu pedido: ${state.orderText}.\n\n${SERVICE_PROMPT}`;
+  }
+
+  if (state.awaitingService) {
+    if (normalizedInput.includes('delivery')) {
+      state.serviceType = 'delivery';
+      state.awaitingService = false;
+      state.awaitingAddress = true;
+      return `Perfecto. ${ADDRESS_PROMPT}`;
+    }
+    if (normalizedInput.includes('tienda') || normalizedInput.includes('comer') || normalizedInput.includes('para llevar') || normalizedInput.includes('llevar') || normalizedInput.includes('retirar')) {
+      state.serviceType = 'tienda';
+      state.awaitingService = false;
+      state.awaitingPaymentConfirm = true;
+      return `${TIME_PROMPT}\n\n${PAYMENT_PROMPT}`;
+    }
+    return SERVICE_PROMPT;
+  }
+
+  if (state.awaitingAddress) {
+    state.awaitingAddress = false;
+    state.awaitingPaymentConfirm = true;
+    return `Direccion recibida.\n\n${PAYMENT_PROMPT}`;
+  }
+
+  if (state.awaitingPaymentConfirm) {
+    if (isYes(userInput)) {
+      resetOrderFlow(state);
+      return `${PAYMENT_MOBILE_TEXT}\n\nCuando realices el pago, enviame el comprobante.`;
+    }
+    if (isNo(userInput)) {
+      resetOrderFlow(state);
+      return 'Ok, puedes pagar al recibir o retirar. Si necesitas algo mas, avisa.';
+    }
+    return PAYMENT_PROMPT;
   }
 
   const outOfHoursNote = getOutOfHoursNote();
@@ -475,7 +558,8 @@ async function getBotReply(phone, userInput) {
   if (state.awaitingDelivery) {
     if (userInput.trim().length >= 4) {
       state.awaitingDelivery = false;
-      return `${outOfHoursNote ? `${outOfHoursNote}\n` : ''}Listo. Confirmo delivery a esa zona y te aviso el tiempo.`;
+      state.awaitingPaymentConfirm = true;
+      return `${outOfHoursNote ? `${outOfHoursNote}\n` : ''}Direccion recibida.\n\n${PAYMENT_PROMPT}`;
     }
     return 'Para delivery dime tu zona y una direccion aproximada.';
   }
