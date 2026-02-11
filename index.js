@@ -28,6 +28,7 @@ const openai = OPENAI_API_KEY ? new OpenAI({ apiKey: OPENAI_API_KEY }) : null;
 
 const chatHistory = [];
 let isBotEnabled = true;
+const userStates = new Map();
 
 app.get('/webhook', (req, res) => {
   const mode = req.query['hub.mode'];
@@ -58,7 +59,7 @@ app.post('/webhook', async (req, res) => {
         return;
       }
 
-      const response = await getBotReply(customerMsg);
+      const response = await getBotReply(customerPhone, customerMsg);
       await sendWhatsApp(customerPhone, response);
     }
 
@@ -108,6 +109,18 @@ function normalizeText(text) {
     .trim();
 }
 
+const MENU_TEXT = 'Menu rapido: 1) Menu del dia 2) Reservas 3) Horarios 4) Ubicacion 5) Delivery 6) Promos.';
+const GREETING_REPLIES = [
+  'Hola. Soy el bot de Sivetachi Restaurante. En que te puedo ayudar?',
+  'Hola! Bienvenido a Sivetachi Restaurante. Como te ayudo hoy?',
+  'Hola, gracias por escribir. Soy el bot de Sivetachi Restaurante.'
+];
+const DEFAULT_REPLIES = [
+  'Gracias por escribir. Escribe "menu" para ver opciones rapidas.',
+  'Estoy aqui para ayudarte. Escribe "menu" y te muestro opciones.',
+  'Quieres ver el menu? Escribe "menu" y te muestro opciones.'
+];
+
 const KEYWORD_RULES = [
   {
     keywords: [
@@ -115,85 +128,213 @@ const KEYWORD_RULES = [
       'buenas tardes', 'buenas noches', 'que tal', 'q tal', 'que hubo', 'qlq',
       'qloq', 'que lo que', 'como estas'
     ],
-    reply: 'Hola. Soy el bot de Sivetachi Restaurante. En que te puedo ayudar?'
+    replies: GREETING_REPLIES
   },
   {
     keywords: ['menu', 'opciones', 'ayuda', 'info', 'informacion'],
-    reply: 'Menu rapido: 1) Menu del dia 2) Reservas 3) Horarios 4) Ubicacion 5) Delivery 6) Promos.'
+    replies: [MENU_TEXT]
   },
   {
     keywords: ['menu', 'carta', 'platos', 'comida', 'sushi', 'parrilla', 'pasta', 'pizza', 'postre'],
-    reply: 'Te paso nuestro menu. Dime si buscas entradas, principales o postres.'
+    replies: [
+      'Te paso nuestro menu. Dime si buscas entradas, principales o postres.',
+      'Tenemos entradas, principales y postres. Que te provoca hoy?'
+    ]
   },
   {
     keywords: ['precio', 'precios', 'costo', 'costos', 'valor', 'tarifa'],
-    reply: 'Claro. Dime el plato o combo y te paso el precio.'
+    replies: [
+      'Claro. Dime el plato o combo y te paso el precio.',
+      'Con gusto. Que plato o combo quieres cotizar?'
+    ]
+  },
+  {
+    keywords: ['cotizacion', 'cotizar', 'presupuesto'],
+    replies: ['Dime que platos o combos necesitas y te preparo la cotizacion.']
   },
   {
     keywords: ['horario', 'horarios', 'abren', 'abierto', 'cierran', 'cerrado'],
-    reply: 'Horario: lunes a jueves 12:00 a 22:00. Viernes y sabado 12:00 a 23:00. Domingo 12:00 a 20:00.'
+    replies: ['Horario: lunes a jueves 12:00 a 22:00. Viernes y sabado 12:00 a 23:00. Domingo 12:00 a 20:00.']
   },
   {
-    keywords: ['ubicacion', 'direccion', 'donde estan', 'donde quedan'],
-    reply: 'Estamos en Guatire. Si quieres, te envio la ubicacion exacta y como llegar.'
+    keywords: ['ubicacion', 'direccion', 'donde estan', 'donde quedan', 'mapa'],
+    replies: ['Estamos en Guatire. Si quieres, te envio la ubicacion exacta y como llegar.']
   },
   {
     keywords: ['reservar', 'reserva', 'reservas', 'mesa', 'agendar'],
-    reply: 'Claro. Para reservar dime fecha, hora y cantidad de personas.'
+    replies: ['Claro. Para reservar dime fecha, hora y cantidad de personas.'],
+    action: 'reserve'
   },
   {
     keywords: ['delivery', 'envio', 'entrega', 'domicilio'],
-    reply: 'Si tenemos delivery. Indica tu zona y te confirmo disponibilidad y tiempo.'
+    replies: ['Si tenemos delivery. Indica tu zona y te confirmo disponibilidad y tiempo.'],
+    action: 'delivery'
   },
   {
     keywords: ['pago', 'pagos', 'transferencia', 'zelle', 'efectivo', 'pago movil'],
-    reply: 'Aceptamos pago movil, transferencia, Zelle y efectivo. Que metodo prefieres?'
+    replies: ['Aceptamos pago movil, transferencia, Zelle y efectivo. Que metodo prefieres?']
   },
   {
     keywords: ['promo', 'promos', 'promocion', 'promociones', 'oferta', 'ofertas'],
-    reply: 'Tenemos promos activas. Dime si prefieres combos, bebidas o postres.'
+    replies: ['Tenemos promos activas. Dime si prefieres combos, bebidas o postres.']
   },
   {
     keywords: ['cumple', 'cumpleanos', 'evento', 'eventos', 'grupo'],
-    reply: 'Atendemos eventos. Dime fecha, cantidad de personas y tipo de evento.'
+    replies: ['Atendemos eventos. Dime fecha, cantidad de personas y tipo de evento.']
   },
   {
     keywords: ['alergia', 'alergias', 'sin gluten', 'vegetariano', 'vegano'],
-    reply: 'Tenemos opciones especiales. Dime tu restriccion y te recomiendo platos.'
+    replies: ['Tenemos opciones especiales. Dime tu restriccion y te recomiendo platos.']
   },
   {
     keywords: ['reclamo', 'queja', 'problema', 'soporte'],
-    reply: 'Lamento el inconveniente. Cuentame que paso y te ayudamos de inmediato.'
+    replies: ['Lamento el inconveniente. Cuentame que paso y te ayudamos de inmediato.'],
+    action: 'handoff'
   },
   {
     keywords: ['asesor', 'humano', 'operador', 'atencion'],
-    reply: 'Te paso con un asesor. Deja tu nombre y un resumen de lo que necesitas.'
+    replies: ['Te paso con un asesor. Deja tu nombre y un resumen de lo que necesitas.'],
+    action: 'handoff'
   },
   {
     keywords: ['gracias', 'ok', 'perfecto', 'listo'],
-    reply: 'Con gusto. Si necesitas algo mas, avisame.'
+    replies: ['Con gusto. Si necesitas algo mas, avisame.']
   }
 ];
 
-function getKeywordReply(userInput) {
+function pickRandom(items) {
+  return items[Math.floor(Math.random() * items.length)];
+}
+
+function getUserState(phone) {
+  if (!userStates.has(phone)) {
+    userStates.set(phone, {
+      greeted: false,
+      handoff: false,
+      awaitingReservation: false,
+      awaitingDelivery: false
+    });
+  }
+  return userStates.get(phone);
+}
+
+function getLocalTimeParts() {
+  const now = new Date();
+  const formatter = new Intl.DateTimeFormat('es-VE', {
+    timeZone: 'America/Caracas',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+    weekday: 'short'
+  });
+  const parts = Object.fromEntries(formatter.formatToParts(now).map((part) => [part.type, part.value]));
+  return {
+    hour: Number(parts.hour),
+    minute: Number(parts.minute),
+    weekday: parts.weekday
+  };
+}
+
+function isOpenNow() {
+  const { hour, weekday } = getLocalTimeParts();
+  const day = weekday.toLowerCase();
+
+  if (['lun', 'mar', 'mie', 'jue'].includes(day)) {
+    return hour >= 12 && hour < 22;
+  }
+  if (['vie', 'sab'].includes(day)) {
+    return hour >= 12 && hour < 23;
+  }
+  return hour >= 12 && hour < 20;
+}
+
+function getOutOfHoursNote() {
+  if (isOpenNow()) {
+    return '';
+  }
+  return 'Nota: Estamos fuera de horario, pero tomamos tu solicitud y te respondemos apenas abramos.';
+}
+
+function getKeywordReply(userInput, state) {
   const text = normalizeText(userInput);
+
+  if (['1', '2', '3', '4', '5', '6'].includes(text)) {
+    if (text === '1') {
+      return 'Menu del dia: Dime si prefieres entradas, principales o postres.';
+    }
+    if (text === '2') {
+      state.awaitingReservation = true;
+      return 'Perfecto. Para reservar dime fecha, hora y cantidad de personas.';
+    }
+    if (text === '3') {
+      return 'Horario: lunes a jueves 12:00 a 22:00. Viernes y sabado 12:00 a 23:00. Domingo 12:00 a 20:00.';
+    }
+    if (text === '4') {
+      return 'Estamos en Guatire. Si quieres, te envio la ubicacion exacta.';
+    }
+    if (text === '5') {
+      state.awaitingDelivery = true;
+      return 'Para delivery dime tu zona y direccion aproximada.';
+    }
+    return 'Tenemos promos activas. Dime si prefieres combos, bebidas o postres.';
+  }
 
   for (const rule of KEYWORD_RULES) {
     if (rule.keywords.some((keyword) => text.includes(keyword))) {
-      return rule.reply;
+      if (rule.action === 'handoff') {
+        state.handoff = true;
+      }
+      if (rule.action === 'reserve') {
+        state.awaitingReservation = true;
+      }
+      if (rule.action === 'delivery') {
+        state.awaitingDelivery = true;
+      }
+      return pickRandom(rule.replies);
     }
   }
 
-  return 'Gracias por escribir. Escribe "menu" para ver opciones rapidas.';
+  return pickRandom(DEFAULT_REPLIES);
 }
 
-async function getBotReply(userInput) {
+async function getBotReply(phone, userInput) {
+  const state = getUserState(phone);
+
+  if (!state.greeted) {
+    state.greeted = true;
+    return `${pickRandom(GREETING_REPLIES)}\n${MENU_TEXT}`;
+  }
+
+  if (state.handoff) {
+    return 'Un asesor te atendera en breve. Si quieres agregar algo, escribelo aqui.';
+  }
+
+  const outOfHoursNote = getOutOfHoursNote();
+
+  if (state.awaitingReservation) {
+    if (userInput.trim().length >= 4) {
+      state.awaitingReservation = false;
+      return `${outOfHoursNote ? `${outOfHoursNote}\n` : ''}Reserva recibida. En breve confirmamos disponibilidad.`;
+    }
+    return 'Para reservar necesito fecha, hora y cantidad de personas.';
+  }
+
+  if (state.awaitingDelivery) {
+    if (userInput.trim().length >= 4) {
+      state.awaitingDelivery = false;
+      return `${outOfHoursNote ? `${outOfHoursNote}\n` : ''}Listo. Confirmo delivery a esa zona y te aviso el tiempo.`;
+    }
+    return 'Para delivery dime tu zona y una direccion aproximada.';
+  }
+
   if (!AI_ENABLED) {
-    return getKeywordReply(userInput);
+    const reply = getKeywordReply(userInput, state);
+    return outOfHoursNote ? `${outOfHoursNote}\n${reply}` : reply;
   }
 
   if (AI_PROVIDER !== 'openai' || !openai) {
-    return getKeywordReply(userInput);
+    const reply = getKeywordReply(userInput, state);
+    return outOfHoursNote ? `${outOfHoursNote}\n${reply}` : reply;
   }
 
   try {
@@ -205,10 +346,12 @@ async function getBotReply(userInput) {
       ]
     });
 
-    return response.output_text || getKeywordReply(userInput);
+    const aiReply = response.output_text || getKeywordReply(userInput, state);
+    return outOfHoursNote ? `${outOfHoursNote}\n${aiReply}` : aiReply;
   } catch (error) {
     console.error('Error AI:', error);
-    return getKeywordReply(userInput);
+    const reply = getKeywordReply(userInput, state);
+    return outOfHoursNote ? `${outOfHoursNote}\n${reply}` : reply;
   }
 }
 
