@@ -170,14 +170,14 @@ function isMenuTrigger(text) {
 
 const MENU_TEXT = [
   'Menu (responde con el numero o selecciona haciendo click):',
-  '1) Promociones del dia',
-  '2) Recomendaciones de chef',
+  '1) Promociones',
+  '2) Recomendaciones',
   '3) Love sushi',
-  '4) Hamburguesas y parrilla',
-  '5) Perros calientes y pepitos',
-  '6) Sucursales y delivery',
+  '4) Hamburguesas',
+  '5) Perros y pepitos',
+  '6) Sucursales',
   '7) Reservas',
-  '8) Promos familiares',
+  '8) Promos XXXL',
   '9) Horarios'
 ].join('\n');
 const GREETING_REPLIES = [
@@ -190,11 +190,11 @@ const DEFAULT_REPLIES = [
 ];
 
 const MENU_CATEGORY_TITLES = {
-  '1': 'Promociones del dia',
-  '2': 'Recomendaciones de chef',
+  '1': 'Promociones',
+  '2': 'Recomendaciones',
   '3': 'Love sushi',
-  '4': 'Hamburguesas y parrilla',
-  '5': 'Perros calientes y pepitos'
+  '4': 'Hamburguesas',
+  '5': 'Perros y pepitos'
 };
 
 const MENU_CATEGORY_ITEMS = {
@@ -559,7 +559,7 @@ function getKeywordReply(userInput, state) {
     return withDialogEnd('Perfecto. Para reservar dime fecha, hora y cantidad de personas.');
   }
   if (text === '8') {
-    return withDialogEnd('Tenemos promos familiares y combos. Dime cuantas personas son.');
+    return withDialogEnd('Tenemos promos XXXL. Dime cuantas personas son.');
   }
   if (text === '9') {
     return withDialogEnd('Horario: lunes a jueves 12:00 a 22:00. Viernes y sabado 12:00 a 23:00. Domingo 12:00 a 20:00.');
@@ -796,14 +796,14 @@ async function sendInteractiveMenu(to) {
           {
             title: 'Categorias',
             rows: [
-              { id: '1', title: 'Promociones del dia' },
-              { id: '2', title: 'Recomendaciones de chef' },
+              { id: '1', title: 'Promociones' },
+              { id: '2', title: 'Recomendaciones' },
               { id: '3', title: 'Love sushi' },
-              { id: '4', title: 'Hamburguesas y parrilla' },
-              { id: '5', title: 'Perros calientes y pepitos' },
-              { id: '6', title: 'Sucursales y delivery' },
+              { id: '4', title: 'Hamburguesas' },
+              { id: '5', title: 'Perros y pepitos' },
+              { id: '6', title: 'Sucursales' },
               { id: '7', title: 'Reservas' },
-              { id: '8', title: 'Promos familiares' },
+              { id: '8', title: 'Promos XXXL' },
               { id: '9', title: 'Horarios' }
             ]
           },
