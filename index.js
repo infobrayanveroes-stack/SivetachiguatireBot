@@ -555,7 +555,12 @@ async function sendInteractiveMenu(to) {
               { id: '7', title: 'Reservas' },
               { id: '8', title: 'Promos' },
               { id: '9', title: 'Horarios' },
-              { id: '10', title: 'Ubicacion' },
+              { id: '10', title: 'Ubicacion' }
+            ]
+          },
+          {
+            title: 'Otros',
+            rows: [
               { id: '0', title: 'Volver a menu' }
             ]
           }
