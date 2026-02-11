@@ -55,8 +55,12 @@ app.post('/webhook', async (req, res) => {
       const interactiveId = message.type === 'interactive'
         ? message.interactive?.list_reply?.id || ''
         : '';
+      const interactiveTitle = message.type === 'interactive'
+        ? message.interactive?.list_reply?.title || ''
+        : '';
+      const inboundText = interactiveTitle || customerMsg || '';
 
-      addChatEvent({ direction: 'in', phone: customerPhone, text: customerMsg });
+      addChatEvent({ direction: 'in', phone: customerPhone, text: inboundText });
 
       if (!isBotEnabled) {
         res.sendStatus(200);
@@ -64,10 +68,15 @@ app.post('/webhook', async (req, res) => {
       }
 
       const state = getUserState(customerPhone);
+      let input = interactiveId || inboundText;
+
       if (!state.greeted) {
         state.greeted = true;
         await sendWhatsApp(customerPhone, pickRandomAvoidRepeat(state, GREETING_REPLIES, 'greeting'));
         await sendInteractiveMenu(customerPhone);
+      }
+
+      if (!input) {
         res.sendStatus(200);
         return;
       }
@@ -75,10 +84,10 @@ app.post('/webhook', async (req, res) => {
       if (interactiveId) {
         const response = await getBotReply(customerPhone, interactiveId);
         await sendWhatsApp(customerPhone, response);
-      } else if (isMenuTrigger(customerMsg)) {
+      } else if (isMenuTrigger(input) || input === '0') {
         await sendInteractiveMenu(customerPhone);
       } else {
-        const response = await getBotReply(customerPhone, customerMsg);
+        const response = await getBotReply(customerPhone, input);
         await sendWhatsApp(customerPhone, response);
       }
     }
@@ -162,7 +171,7 @@ const DEFAULT_REPLIES = [
 const MENU_DIA_TEXT = [
   'Menu del dia (ejemplo):',
   '- Pollo a la plancha + ensalada: Bs. 6',
-  '- Pasta boloñesa: Bs. 7',
+  '- Pasta bolognesa: Bs. 7',
   '- Arroz mixto: Bs. 6',
   '- Pabellon: Bs. 8',
   '- Ensalada cesar: Bs. 6'
@@ -557,7 +566,6 @@ function addChatEvent({ direction, phone, text }) {
   if (chatHistory.length > 200) {
     chatHistory.shift();
   }
-
 }
 
 const PORT = process.env.PORT || 3000;

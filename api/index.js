@@ -81,7 +81,7 @@ const DEFAULT_REPLIES = [
 const MENU_DIA_TEXT = [
   'Menu del dia (ejemplo):',
   '- Pollo a la plancha + ensalada: Bs. 6',
-  '- Pasta boloñesa: Bs. 7',
+  '- Pasta bolognesa: Bs. 7',
   '- Arroz mixto: Bs. 6',
   '- Pabellon: Bs. 8',
   '- Ensalada cesar: Bs. 6'
@@ -364,10 +364,6 @@ function getKeywordReply(userInput, state) {
 async function getBotReply(phone, userInput) {
   const state = getUserState(phone);
 
-  if (!state.greeted) {
-    state.greeted = true;
-  }
-
   if (state.handoff) {
     return 'Un asesor te atendera en breve. Si quieres agregar algo, escribelo aqui.';
   }
@@ -516,28 +512,42 @@ module.exports = async (req, res) => {
         const interactiveId = message.type === 'interactive'
           ? message.interactive?.list_reply?.id || ''
           : '';
-        addChatEvent({ direction: 'in', phone: customerPhone, text: customerMsg });
+        const interactiveTitle = message.type === 'interactive'
+          ? message.interactive?.list_reply?.title || ''
+          : '';
+        const inboundText = interactiveTitle || customerMsg || '';
 
-        if (isBotEnabled) {
-          const state = getUserState(customerPhone);
-          if (!state.greeted) {
-            state.greeted = true;
-            await sendWhatsApp(customerPhone, pickRandomAvoidRepeat(state, GREETING_REPLIES, 'greeting'));
-            await sendInteractiveMenu(customerPhone);
-            res.statusCode = 200;
-            res.end('OK');
-            return;
-          }
+        addChatEvent({ direction: 'in', phone: customerPhone, text: inboundText });
 
-          if (interactiveId) {
-            const response = await getBotReply(customerPhone, interactiveId);
-            await sendWhatsApp(customerPhone, response);
-          } else if (isMenuTrigger(customerMsg)) {
-            await sendInteractiveMenu(customerPhone);
-          } else {
-            const response = await getBotReply(customerPhone, customerMsg);
-            await sendWhatsApp(customerPhone, response);
-          }
+        if (!isBotEnabled) {
+          res.statusCode = 200;
+          res.end('OK');
+          return;
+        }
+
+        const state = getUserState(customerPhone);
+        let input = interactiveId || inboundText;
+
+        if (!state.greeted) {
+          state.greeted = true;
+          await sendWhatsApp(customerPhone, pickRandomAvoidRepeat(state, GREETING_REPLIES, 'greeting'));
+          await sendInteractiveMenu(customerPhone);
+        }
+
+        if (!input) {
+          res.statusCode = 200;
+          res.end('OK');
+          return;
+        }
+
+        if (interactiveId) {
+          const response = await getBotReply(customerPhone, interactiveId);
+          await sendWhatsApp(customerPhone, response);
+        } else if (isMenuTrigger(input) || input === '0') {
+          await sendInteractiveMenu(customerPhone);
+        } else {
+          const response = await getBotReply(customerPhone, input);
+          await sendWhatsApp(customerPhone, response);
         }
       }
 
