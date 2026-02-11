@@ -105,60 +105,64 @@ function normalizeText(text) {
 
 const KEYWORD_RULES = [
   {
-    keywords: ['hola', 'buenas', 'buenos dias', 'buenas tardes', 'buenas noches'],
-    reply: 'Hola. Soy el bot de Sivetachi. En que te puedo ayudar?'
+    keywords: [
+      'hola', 'holi', 'hey', 'epa', 'epale', 'buenas', 'buen dia', 'buenos dias',
+      'buenas tardes', 'buenas noches', 'que tal', 'q tal', 'que hubo', 'qlq',
+      'qloq', 'que lo que', 'como estas'
+    ],
+    reply: 'Hola. Soy el bot de Sivetachi Restaurante. En que te puedo ayudar?'
   },
   {
     keywords: ['menu', 'opciones', 'ayuda', 'info', 'informacion'],
-    reply: 'Menu rapido: 1) Precios 2) Horarios 3) Ubicacion 4) Catalogo 5) Agendar 6) Hablar con asesor.'
+    reply: 'Menu rapido: 1) Menu del dia 2) Reservas 3) Horarios 4) Ubicacion 5) Delivery 6) Promos.'
+  },
+  {
+    keywords: ['menu', 'carta', 'platos', 'comida', 'sushi', 'parrilla', 'pasta', 'pizza', 'postre'],
+    reply: 'Te paso nuestro menu. Dime si buscas entradas, principales o postres.'
   },
   {
     keywords: ['precio', 'precios', 'costo', 'costos', 'valor', 'tarifa'],
-    reply: 'Tenemos planes y precios segun el servicio. Dime que necesitas y te paso la info.'
-  },
-  {
-    keywords: ['cotizacion', 'cotizar', 'presupuesto'],
-    reply: 'Con gusto. Dime que servicio necesitas y te preparo una cotizacion.'
+    reply: 'Claro. Dime el plato o combo y te paso el precio.'
   },
   {
     keywords: ['horario', 'horarios', 'abren', 'abierto', 'cierran', 'cerrado'],
-    reply: 'Nuestro horario es de lunes a viernes de 9 a 18. Sabado de 9 a 13.'
+    reply: 'Horario: lunes a jueves 12:00 a 22:00. Viernes y sabado 12:00 a 23:00. Domingo 12:00 a 20:00.'
   },
   {
     keywords: ['ubicacion', 'direccion', 'donde estan', 'donde quedan'],
-    reply: 'Estamos en Guatire. Si quieres, te envio la ubicacion exacta por aqui.'
+    reply: 'Estamos en Guatire. Si quieres, te envio la ubicacion exacta y como llegar.'
   },
   {
-    keywords: ['pago', 'pagos', 'transferencia', 'zelle', 'efectivo'],
-    reply: 'Aceptamos transferencia, Zelle y efectivo. Dime que metodo prefieres.'
+    keywords: ['reservar', 'reserva', 'reservas', 'mesa', 'agendar'],
+    reply: 'Claro. Para reservar dime fecha, hora y cantidad de personas.'
   },
   {
-    keywords: ['garantia', 'garantias'],
-    reply: 'Ofrecemos garantia segun el servicio. Dime cual necesitas y te explico los terminos.'
+    keywords: ['delivery', 'envio', 'entrega', 'domicilio'],
+    reply: 'Si tenemos delivery. Indica tu zona y te confirmo disponibilidad y tiempo.'
   },
   {
-    keywords: ['envio', 'entrega', 'delivery'],
-    reply: 'Si hacemos entregas. Indica tu zona para confirmar disponibilidad.'
+    keywords: ['pago', 'pagos', 'transferencia', 'zelle', 'efectivo', 'pago movil'],
+    reply: 'Aceptamos pago movil, transferencia, Zelle y efectivo. Que metodo prefieres?'
   },
   {
-    keywords: ['catalogo', 'productos', 'servicios'],
-    reply: 'Tenemos varios servicios. Dime que buscas y te paso el catalogo.'
+    keywords: ['promo', 'promos', 'promocion', 'promociones', 'oferta', 'ofertas'],
+    reply: 'Tenemos promos activas. Dime si prefieres combos, bebidas o postres.'
   },
   {
-    keywords: ['agendar', 'cita', 'reservar'],
-    reply: 'Claro, dime que dia y hora te conviene y lo agendamos.'
+    keywords: ['cumple', 'cumpleanos', 'evento', 'eventos', 'grupo'],
+    reply: 'Atendemos eventos. Dime fecha, cantidad de personas y tipo de evento.'
   },
   {
-    keywords: ['asesor', 'humano', 'operador', 'atencion'],
-    reply: 'Te paso con un asesor. Por favor deja tu nombre y un resumen de lo que necesitas.'
+    keywords: ['alergia', 'alergias', 'sin gluten', 'vegetariano', 'vegano'],
+    reply: 'Tenemos opciones especiales. Dime tu restriccion y te recomiendo platos.'
   },
   {
     keywords: ['reclamo', 'queja', 'problema', 'soporte'],
-    reply: 'Lamento el inconveniente. Describe el problema y un asesor te ayudara.'
+    reply: 'Lamento el inconveniente. Cuentame que paso y te ayudamos de inmediato.'
   },
   {
-    keywords: ['promocion', 'promociones', 'oferta', 'ofertas'],
-    reply: 'Tenemos promos activas esta semana. Dime que servicio te interesa y te doy detalles.'
+    keywords: ['asesor', 'humano', 'operador', 'atencion'],
+    reply: 'Te paso con un asesor. Deja tu nombre y un resumen de lo que necesitas.'
   },
   {
     keywords: ['gracias', 'ok', 'perfecto', 'listo'],
