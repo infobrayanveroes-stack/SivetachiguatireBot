@@ -69,8 +69,7 @@ const MENU_TEXT = [
   '6) Sucursales y delivery',
   '7) Reservas',
   '8) Promos familiares y combos',
-  '9) Horarios',
-  '0) Volver a menu'
+  '9) Horarios'
 ].join('\n');
 const GREETING_REPLIES = [
   'Hola, Soy el bot de sivetachi Restaurante. En que te puedo ayudar?'
@@ -616,7 +615,7 @@ async function sendCategoryMenu(to, categoryId) {
           {
             title: 'Otros',
             rows: [
-              { id: '0', title: 'Volver a menu' }
+              { id: 'menu', title: 'Volver al menu' }
             ]
           }
         ]
@@ -657,7 +656,7 @@ async function sendInteractiveMenu(to) {
           {
             title: 'Otros',
             rows: [
-              { id: '0', title: 'Volver a menu' }
+              { id: 'menu', title: 'Volver al menu' }
             ]
           }
         ]
