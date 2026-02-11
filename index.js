@@ -69,11 +69,13 @@ app.post('/webhook', async (req, res) => {
 
       const state = getUserState(customerPhone);
       let input = interactiveId || inboundText;
+      let didSendMenu = false;
 
       if (!state.greeted) {
         state.greeted = true;
         await sendWhatsApp(customerPhone, pickRandomAvoidRepeat(state, GREETING_REPLIES, 'greeting'));
-        await sendInteractiveMenu(customerPhone);
+        await sendMenuWithFallback(customerPhone);
+        didSendMenu = true;
       }
 
       if (!input) {
@@ -81,11 +83,15 @@ app.post('/webhook', async (req, res) => {
         return;
       }
 
-      if (interactiveId) {
+      if (interactiveId === '0') {
+        await sendMenuWithFallback(customerPhone);
+      } else if (interactiveId) {
         const response = await getBotReply(customerPhone, interactiveId);
         await sendWhatsApp(customerPhone, response);
       } else if (isMenuTrigger(input) || input === '0') {
-        await sendInteractiveMenu(customerPhone);
+        if (!didSendMenu) {
+          await sendMenuWithFallback(customerPhone);
+        }
       } else {
         const response = await getBotReply(customerPhone, input);
         await sendWhatsApp(customerPhone, response);
@@ -514,6 +520,15 @@ async function sendWhatsApp(to, text) {
   });
 
   addChatEvent({ direction: 'out', phone: to, text });
+}
+
+async function sendMenuWithFallback(to) {
+  try {
+    await sendInteractiveMenu(to);
+  } catch (error) {
+    console.error('Error sending interactive menu, falling back to text:', error);
+    await sendWhatsApp(to, MENU_TEXT);
+  }
 }
 
 async function sendInteractiveMenu(to) {
