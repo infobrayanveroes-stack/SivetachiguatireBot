@@ -1,8 +1,6 @@
 const axios = require('axios');
-const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 const REQUIRED_ENV = [
-  'GEMINI_API_KEY',
   'WA_TOKEN',
   'VERIFY_TOKEN',
   'PHONE_NUMBER_ID'
@@ -13,15 +11,6 @@ if (missingEnv.length > 0) {
   console.warn(`Missing env vars: ${missingEnv.join(', ')}`);
 }
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const GEMINI_MODEL = (process.env.GEMINI_MODEL || 'gemini-1.5-flash').trim();
-const MODEL_CANDIDATES = Array.from(new Set([
-  GEMINI_MODEL,
-  'gemini-1.5-flash',
-  'gemini-1.5-flash-002',
-  'gemini-1.5-pro',
-  'gemini-1.0-pro'
-]));
 const WA_TOKEN = process.env.WA_TOKEN;
 const PHONE_NUMBER_ID = process.env.PHONE_NUMBER_ID;
 
@@ -43,29 +32,61 @@ function addChatEvent({ direction, phone, text }) {
   }
 }
 
-async function askAssistant(userInput) {
-  let lastError;
+function normalizeText(text) {
+  return text
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
 
-  for (const modelName of MODEL_CANDIDATES) {
-    try {
-      const model = genAI.getGenerativeModel({ model: modelName });
-      const result = await model.generateContent(userInput);
-      if (modelName !== GEMINI_MODEL) {
-        console.warn(`Model ${GEMINI_MODEL} failed, using ${modelName}`);
-      }
-      return result.response.text();
-    } catch (error) {
-      const message = String(error?.message || '');
-      const isNotFound = message.includes('404') || message.toLowerCase().includes('not found');
-      lastError = error;
+const KEYWORD_RULES = [
+  {
+    keywords: ['hola', 'buenas', 'buenos dias', 'buenas tardes', 'buenas noches'],
+    reply: 'Hola. Soy el bot de Sivetachi. En que te puedo ayudar?'
+  },
+  {
+    keywords: ['precio', 'precios', 'costo', 'costos', 'valor', 'tarifa'],
+    reply: 'Tenemos planes y precios segun el servicio. Dime que necesitas y te paso la info.'
+  },
+  {
+    keywords: ['horario', 'horarios', 'abren', 'abierto', 'cierran', 'cerrado'],
+    reply: 'Nuestro horario es de lunes a viernes de 9 a 18. Sabado de 9 a 13.'
+  },
+  {
+    keywords: ['ubicacion', 'direccion', 'donde estan', 'donde quedan'],
+    reply: 'Estamos en Guatire. Si quieres, te envio la ubicacion exacta por aqui.'
+  },
+  {
+    keywords: ['envio', 'entrega', 'delivery'],
+    reply: 'Si hacemos entregas. Indica tu zona para confirmar disponibilidad.'
+  },
+  {
+    keywords: ['catalogo', 'productos', 'servicios'],
+    reply: 'Tenemos varios servicios. Dime que buscas y te paso el catalogo.'
+  },
+  {
+    keywords: ['agendar', 'cita', 'reservar'],
+    reply: 'Claro, dime que dia y hora te conviene y lo agendamos.'
+  },
+  {
+    keywords: ['gracias', 'ok', 'perfecto', 'listo'],
+    reply: 'Con gusto. Si necesitas algo mas, avisame.'
+  }
+];
 
-      if (!isNotFound) {
-        throw error;
-      }
+function getKeywordReply(userInput) {
+  const text = normalizeText(userInput);
+
+  for (const rule of KEYWORD_RULES) {
+    if (rule.keywords.some((keyword) => text.includes(keyword))) {
+      return rule.reply;
     }
   }
 
-  throw lastError;
+  return 'Gracias por escribir. Por favor dime en que puedo ayudarte.';
 }
 
 async function sendWhatsApp(to, text) {
@@ -129,7 +150,7 @@ module.exports = async (req, res) => {
         addChatEvent({ direction: 'in', phone: customerPhone, text: customerMsg });
 
         if (isBotEnabled) {
-          const response = await askAssistant(customerMsg);
+          const response = getKeywordReply(customerMsg);
           await sendWhatsApp(customerPhone, response);
         }
       }
