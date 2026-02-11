@@ -48,7 +48,19 @@ function normalizeText(text) {
     .trim();
 }
 
-const MENU_TEXT = 'Menu rapido: 1) Menu del dia 2) Reservas 3) Horarios 4) Ubicacion 5) Delivery 6) Promos.';
+const MENU_TEXT = [
+  'Menu rapido (responde con el numero):',
+  '1) Menu del dia',
+  '2) Sushi',
+  '3) Hamburguesas',
+  '4) Perros calientes',
+  '5) Pepitos',
+  '6) Delivery',
+  '7) Reservas',
+  '8) Promos',
+  '9) Horarios',
+  '10) Ubicacion'
+].join('\n');
 const GREETING_REPLIES = [
   'Hola. Soy el bot de Sivetachi Restaurante. En que te puedo ayudar?',
   'Hola! Bienvenido a Sivetachi Restaurante. Como te ayudo hoy?',
@@ -59,6 +71,41 @@ const DEFAULT_REPLIES = [
   'Estoy aqui para ayudarte. Escribe "menu" y te muestro opciones.',
   'Quieres ver el menu? Escribe "menu" y te muestro opciones.'
 ];
+
+const MENU_DIA_TEXT = [
+  'Menu del dia (ejemplo):',
+  '- Pollo a la plancha + ensalada: Bs. 6',
+  '- Pasta boloñesa: Bs. 7',
+  '- Arroz mixto: Bs. 6'
+].join('\n');
+
+const SUSHI_TEXT = [
+  'Sushi (ejemplo):',
+  '- California roll (8): Bs. 8',
+  '- Tempura roll (8): Bs. 9',
+  '- Salmón roll (8): Bs. 10'
+].join('\n');
+
+const BURGER_TEXT = [
+  'Hamburguesas (ejemplo):',
+  '- Clasica: Bs. 6',
+  '- Doble queso: Bs. 8',
+  '- Pollo crispy: Bs. 7'
+].join('\n');
+
+const HOTDOG_TEXT = [
+  'Perros calientes (ejemplo):',
+  '- Sencillo: Bs. 4',
+  '- Especial: Bs. 6',
+  '- Full toppings: Bs. 7'
+].join('\n');
+
+const PEPITO_TEXT = [
+  'Pepitos (ejemplo):',
+  '- Pollo: Bs. 7',
+  '- Carne: Bs. 8',
+  '- Mixto: Bs. 9'
+].join('\n');
 
 const KEYWORD_RULES = [
   {
@@ -74,7 +121,27 @@ const KEYWORD_RULES = [
     replies: [MENU_TEXT]
   },
   {
-    keywords: ['menu', 'carta', 'platos', 'comida', 'sushi', 'parrilla', 'pasta', 'pizza', 'postre'],
+    keywords: ['menu del dia', 'menu dia', 'almuerzo', 'almorzar'],
+    replies: [MENU_DIA_TEXT]
+  },
+  {
+    keywords: ['sushi', 'maki', 'makis', 'roll', 'rolls', 'salmon', 'tempura'],
+    replies: [SUSHI_TEXT]
+  },
+  {
+    keywords: ['hamburguesa', 'hamburguesas', 'burger', 'burgers', 'hamb'],
+    replies: [BURGER_TEXT]
+  },
+  {
+    keywords: ['perro', 'perros', 'perro caliente', 'perros calientes', 'hot dog', 'hotdog'],
+    replies: [HOTDOG_TEXT]
+  },
+  {
+    keywords: ['pepito', 'pepitos'],
+    replies: [PEPITO_TEXT]
+  },
+  {
+    keywords: ['carta', 'platos', 'comida', 'parrilla', 'pasta', 'pizza', 'postre'],
     replies: [
       'Te paso nuestro menu. Dime si buscas entradas, principales o postres.',
       'Tenemos entradas, principales y postres. Que te provoca hoy?'
@@ -145,13 +212,29 @@ function pickRandom(items) {
   return items[Math.floor(Math.random() * items.length)];
 }
 
+function pickRandomAvoidRepeat(state, items, key) {
+  if (items.length === 1) {
+    return items[0];
+  }
+  const last = state.lastReplies?.[key];
+  let next = pickRandom(items);
+  if (last && next === last) {
+    const alternatives = items.filter((item) => item !== last);
+    next = alternatives.length > 0 ? pickRandom(alternatives) : next;
+  }
+  state.lastReplies = state.lastReplies || {};
+  state.lastReplies[key] = next;
+  return next;
+}
+
 function getUserState(phone) {
   if (!userStates.has(phone)) {
     userStates.set(phone, {
       greeted: false,
       handoff: false,
       awaitingReservation: false,
-      awaitingDelivery: false
+      awaitingDelivery: false,
+      lastReplies: {}
     });
   }
   return userStates.get(phone);
@@ -197,28 +280,41 @@ function getOutOfHoursNote() {
 function getKeywordReply(userInput, state) {
   const text = normalizeText(userInput);
 
-  if (['1', '2', '3', '4', '5', '6'].includes(text)) {
+  if (['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'].includes(text)) {
     if (text === '1') {
-      return 'Menu del dia: Dime si prefieres entradas, principales o postres.';
+      return MENU_DIA_TEXT;
     }
     if (text === '2') {
-      state.awaitingReservation = true;
-      return 'Perfecto. Para reservar dime fecha, hora y cantidad de personas.';
+      return SUSHI_TEXT;
     }
     if (text === '3') {
-      return 'Horario: lunes a jueves 12:00 a 22:00. Viernes y sabado 12:00 a 23:00. Domingo 12:00 a 20:00.';
+      return BURGER_TEXT;
     }
     if (text === '4') {
-      return 'Estamos en Guatire. Si quieres, te envio la ubicacion exacta.';
+      return HOTDOG_TEXT;
     }
     if (text === '5') {
+      return PEPITO_TEXT;
+    }
+    if (text === '6') {
       state.awaitingDelivery = true;
       return 'Para delivery dime tu zona y direccion aproximada.';
     }
-    return 'Tenemos promos activas. Dime si prefieres combos, bebidas o postres.';
+    if (text === '7') {
+      state.awaitingReservation = true;
+      return 'Perfecto. Para reservar dime fecha, hora y cantidad de personas.';
+    }
+    if (text === '8') {
+      return 'Tenemos promos activas. Dime si prefieres combos, bebidas o postres.';
+    }
+    if (text === '9') {
+      return 'Horario: lunes a jueves 12:00 a 22:00. Viernes y sabado 12:00 a 23:00. Domingo 12:00 a 20:00.';
+    }
+    return 'Estamos en Guatire. Si quieres, te envio la ubicacion exacta.';
   }
 
-  for (const rule of KEYWORD_RULES) {
+  for (let index = 0; index < KEYWORD_RULES.length; index += 1) {
+    const rule = KEYWORD_RULES[index];
     if (rule.keywords.some((keyword) => text.includes(keyword))) {
       if (rule.action === 'handoff') {
         state.handoff = true;
@@ -229,11 +325,11 @@ function getKeywordReply(userInput, state) {
       if (rule.action === 'delivery') {
         state.awaitingDelivery = true;
       }
-      return pickRandom(rule.replies);
+      return pickRandomAvoidRepeat(state, rule.replies, `rule-${index}`);
     }
   }
 
-  return pickRandom(DEFAULT_REPLIES);
+  return pickRandomAvoidRepeat(state, DEFAULT_REPLIES, 'default');
 }
 
 async function getBotReply(phone, userInput) {
@@ -241,7 +337,7 @@ async function getBotReply(phone, userInput) {
 
   if (!state.greeted) {
     state.greeted = true;
-    return `${pickRandom(GREETING_REPLIES)}\n${MENU_TEXT}`;
+    return `${pickRandomAvoidRepeat(state, GREETING_REPLIES, 'greeting')}\n${MENU_TEXT}`;
   }
 
   if (state.handoff) {
