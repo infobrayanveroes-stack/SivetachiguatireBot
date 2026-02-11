@@ -49,9 +49,13 @@ app.post('/webhook', async (req, res) => {
     const changes = entry?.changes?.[0];
     const message = changes?.value?.messages?.[0];
 
-    if (message && message.type === 'text') {
+    if (message && (message.type === 'text' || message.type === 'interactive')) {
       const customerPhone = message.from;
-      const customerMsg = message.text.body;
+      const customerMsg = message.type === 'text' ? message.text.body : '';
+      const interactiveId = message.type === 'interactive'
+        ? message.interactive?.list_reply?.id || ''
+        : '';
+
       addChatEvent({ direction: 'in', phone: customerPhone, text: customerMsg });
 
       if (!isBotEnabled) {
@@ -59,8 +63,15 @@ app.post('/webhook', async (req, res) => {
         return;
       }
 
-      const response = await getBotReply(customerPhone, customerMsg);
-      await sendWhatsApp(customerPhone, response);
+      if (interactiveId) {
+        const response = await getBotReply(customerPhone, interactiveId);
+        await sendWhatsApp(customerPhone, response);
+      } else if (isMenuTrigger(customerMsg)) {
+        await sendInteractiveMenu(customerPhone);
+      } else {
+        const response = await getBotReply(customerPhone, customerMsg);
+        await sendWhatsApp(customerPhone, response);
+      }
     }
 
     res.sendStatus(200);
@@ -107,6 +118,11 @@ function normalizeText(text) {
     .replace(/[^a-z0-9\s]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
+}
+
+function isMenuTrigger(text) {
+  const normalized = normalizeText(text);
+  return normalized === 'menu' || normalized === 'menu rapido' || normalized === 'opciones';
 }
 
 const MENU_TEXT = [
@@ -360,7 +376,7 @@ function withDialogEnd(text) {
 function getKeywordReply(userInput, state) {
   const text = normalizeText(userInput);
 
-  if (text === '0') {
+  if (text === '0' || text === 'menu') {
     return MENU_TEXT;
   }
 
@@ -485,6 +501,42 @@ async function sendWhatsApp(to, text) {
   });
 
   addChatEvent({ direction: 'out', phone: to, text });
+}
+
+async function sendInteractiveMenu(to) {
+  await axios.post(`https://graph.facebook.com/v18.0/${PHONE_NUMBER_ID}/messages`, {
+    messaging_product: 'whatsapp',
+    to,
+    type: 'interactive',
+    interactive: {
+      type: 'list',
+      header: { type: 'text', text: 'Menu rapido' },
+      body: { text: 'Elige una opcion:' },
+      footer: { text: 'Sivetachi Restaurante' },
+      action: {
+        button: 'Ver opciones',
+        sections: [
+          {
+            title: 'Categorias',
+            rows: [
+              { id: '1', title: 'Menu del dia' },
+              { id: '2', title: 'Sushi' },
+              { id: '3', title: 'Hamburguesas' },
+              { id: '4', title: 'Perros calientes' },
+              { id: '5', title: 'Pepitos' },
+              { id: '6', title: 'Delivery' },
+              { id: '7', title: 'Reservas' },
+              { id: '8', title: 'Promos' },
+              { id: '9', title: 'Horarios' },
+              { id: '10', title: 'Ubicacion' }
+            ]
+          }
+        ]
+      }
+    }
+  }, {
+    headers: { Authorization: `Bearer ${WA_TOKEN}` }
+  });
 }
 
 function addChatEvent({ direction, phone, text }) {
