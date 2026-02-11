@@ -120,7 +120,8 @@ const MENU_TEXT = [
   '7) Reservas',
   '8) Promos',
   '9) Horarios',
-  '10) Ubicacion'
+  '10) Ubicacion',
+  '0) Volver a menu'
 ].join('\n');
 const GREETING_REPLIES = [
   'Hola. Soy el bot de Sivetachi Restaurante. En que te puedo ayudar?',
@@ -137,35 +138,45 @@ const MENU_DIA_TEXT = [
   'Menu del dia (ejemplo):',
   '- Pollo a la plancha + ensalada: Bs. 6',
   '- Pasta boloñesa: Bs. 7',
-  '- Arroz mixto: Bs. 6'
+  '- Arroz mixto: Bs. 6',
+  '- Pabellon: Bs. 8',
+  '- Ensalada cesar: Bs. 6'
 ].join('\n');
 
 const SUSHI_TEXT = [
   'Sushi (ejemplo):',
   '- California roll (8): Bs. 8',
   '- Tempura roll (8): Bs. 9',
-  '- Salmón roll (8): Bs. 10'
+  '- Salmon roll (8): Bs. 10',
+  '- Tropical roll (8): Bs. 10',
+  '- Crispy roll (8): Bs. 11'
 ].join('\n');
 
 const BURGER_TEXT = [
   'Hamburguesas (ejemplo):',
   '- Clasica: Bs. 6',
   '- Doble queso: Bs. 8',
-  '- Pollo crispy: Bs. 7'
+  '- Pollo crispy: Bs. 7',
+  '- BBQ: Bs. 9',
+  '- Especial de la casa: Bs. 10'
 ].join('\n');
 
 const HOTDOG_TEXT = [
   'Perros calientes (ejemplo):',
   '- Sencillo: Bs. 4',
   '- Especial: Bs. 6',
-  '- Full toppings: Bs. 7'
+  '- Full toppings: Bs. 7',
+  '- Super perro: Bs. 8',
+  '- Perro mixto: Bs. 9'
 ].join('\n');
 
 const PEPITO_TEXT = [
   'Pepitos (ejemplo):',
   '- Pollo: Bs. 7',
   '- Carne: Bs. 8',
-  '- Mixto: Bs. 9'
+  '- Mixto: Bs. 9',
+  '- Pepito especial: Bs. 11',
+  '- Pepito full queso: Bs. 12'
 ].join('\n');
 
 const KEYWORD_RULES = [
@@ -338,40 +349,52 @@ function getOutOfHoursNote() {
   return 'Nota: Estamos fuera de horario, pero tomamos tu solicitud y te respondemos apenas abramos.';
 }
 
+function withMenuFooter(text) {
+  return `${text}\n\nEscribe 0 para volver al menu principal.`;
+}
+
+function withDialogEnd(text) {
+  return `${text}\n\nDeseas otra cosa? Escribe "menu".`;
+}
+
 function getKeywordReply(userInput, state) {
   const text = normalizeText(userInput);
 
+  if (text === '0') {
+    return MENU_TEXT;
+  }
+
   if (['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'].includes(text)) {
     if (text === '1') {
-      return MENU_DIA_TEXT;
+      return withMenuFooter(MENU_DIA_TEXT);
     }
     if (text === '2') {
-      return SUSHI_TEXT;
+      return withMenuFooter(SUSHI_TEXT);
     }
     if (text === '3') {
-      return BURGER_TEXT;
+      return withMenuFooter(BURGER_TEXT);
     }
     if (text === '4') {
-      return HOTDOG_TEXT;
+      return withMenuFooter(HOTDOG_TEXT);
     }
     if (text === '5') {
-      return PEPITO_TEXT;
+      return withMenuFooter(PEPITO_TEXT);
     }
     if (text === '6') {
       state.awaitingDelivery = true;
-      return 'Para delivery dime tu zona y direccion aproximada.';
+      return withDialogEnd('Para delivery dime tu zona y direccion aproximada.');
     }
     if (text === '7') {
       state.awaitingReservation = true;
-      return 'Perfecto. Para reservar dime fecha, hora y cantidad de personas.';
+      return withDialogEnd('Perfecto. Para reservar dime fecha, hora y cantidad de personas.');
     }
     if (text === '8') {
-      return 'Tenemos promos activas. Dime si prefieres combos, bebidas o postres.';
+      return withDialogEnd('Tenemos promos activas. Dime si prefieres combos, bebidas o postres.');
     }
     if (text === '9') {
-      return 'Horario: lunes a jueves 12:00 a 22:00. Viernes y sabado 12:00 a 23:00. Domingo 12:00 a 20:00.';
+      return withDialogEnd('Horario: lunes a jueves 12:00 a 22:00. Viernes y sabado 12:00 a 23:00. Domingo 12:00 a 20:00.');
     }
-    return 'Estamos en Guatire. Si quieres, te envio la ubicacion exacta.';
+    return withDialogEnd('Estamos en Guatire. Si quieres, te envio la ubicacion exacta.');
   }
 
   for (let index = 0; index < KEYWORD_RULES.length; index += 1) {
@@ -386,7 +409,8 @@ function getKeywordReply(userInput, state) {
       if (rule.action === 'delivery') {
         state.awaitingDelivery = true;
       }
-      return pickRandomAvoidRepeat(state, rule.replies, `rule-${index}`);
+      const reply = pickRandomAvoidRepeat(state, rule.replies, `rule-${index}`);
+      return withDialogEnd(reply);
     }
   }
 
