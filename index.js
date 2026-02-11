@@ -1,5 +1,6 @@
 const express = require('express');
 const axios = require('axios');
+const OpenAI = require('openai');
 const path = require('path');
 require('dotenv').config();
 
@@ -20,6 +21,10 @@ for (const key of REQUIRED_ENV) {
 
 const WA_TOKEN = process.env.WA_TOKEN;
 const PHONE_NUMBER_ID = process.env.PHONE_NUMBER_ID;
+const AI_ENABLED = String(process.env.AI_ENABLED || '').toLowerCase() === 'true';
+const AI_PROVIDER = (process.env.AI_PROVIDER || 'openai').toLowerCase();
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+const openai = OPENAI_API_KEY ? new OpenAI({ apiKey: OPENAI_API_KEY }) : null;
 
 const chatHistory = [];
 let isBotEnabled = true;
@@ -53,7 +58,7 @@ app.post('/webhook', async (req, res) => {
         return;
       }
 
-      const response = getKeywordReply(customerMsg);
+      const response = await getBotReply(customerMsg);
       await sendWhatsApp(customerPhone, response);
     }
 
@@ -180,6 +185,31 @@ function getKeywordReply(userInput) {
   }
 
   return 'Gracias por escribir. Escribe "menu" para ver opciones rapidas.';
+}
+
+async function getBotReply(userInput) {
+  if (!AI_ENABLED) {
+    return getKeywordReply(userInput);
+  }
+
+  if (AI_PROVIDER !== 'openai' || !openai) {
+    return getKeywordReply(userInput);
+  }
+
+  try {
+    const response = await openai.responses.create({
+      model: 'gpt-4.1-mini',
+      input: [
+        { role: 'system', content: 'Eres un asistente de restaurante. Responde breve y amable. Si no sabes, ofrece el menu o un asesor.' },
+        { role: 'user', content: userInput }
+      ]
+    });
+
+    return response.output_text || getKeywordReply(userInput);
+  } catch (error) {
+    console.error('Error AI:', error);
+    return getKeywordReply(userInput);
+  }
 }
 
 async function sendWhatsApp(to, text) {
