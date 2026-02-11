@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SiveBot Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600&family=Urbanist:wght@300;500;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #f4f1ea;
+      --ink: #1a1a1a;
+      --accent: #f76c4f;
+      --accent-2: #1fb6a6;
+      --card: rgba(255, 255, 255, 0.9);
+      --shadow: 0 16px 36px rgba(0, 0, 0, 0.12);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Urbanist", sans-serif;
+      color: var(--ink);
+      background: radial-gradient(circle at 10% 20%, #ffe6d8, transparent 55%),
+        radial-gradient(circle at 80% 0%, #d6f3ee, transparent 45%),
+        var(--bg);
+      min-height: 100vh;
+      padding: 28px 24px 40px;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+
+    h1 {
+      font-family: "Oswald", sans-serif;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin: 0;
+      font-size: clamp(2rem, 4vw, 3rem);
+    }
+
+    .status {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 16px;
+      border-radius: 999px;
+      background: var(--card);
+      box-shadow: var(--shadow);
+      font-weight: 600;
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 0 4px rgba(247, 108, 79, 0.2);
+    }
+
+    main {
+      display: grid;
+      gap: 20px;
+      grid-template-columns: minmax(0, 1.3fr) minmax(0, 0.7fr);
+    }
+
+    .card {
+      background: var(--card);
+      border-radius: 24px;
+      padding: 20px;
+      box-shadow: var(--shadow);
+      animation: lift 0.4s ease;
+    }
+
+    .card h2 {
+      margin: 0 0 12px;
+      font-size: 0.95rem;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      color: #444;
+    }
+
+    .chat-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      max-height: 520px;
+      overflow: auto;
+      padding-right: 6px;
+    }
+
+    .chat-item {
+      padding: 12px 14px;
+      border-radius: 16px;
+      background: white;
+      border: 1px solid rgba(0, 0, 0, 0.06);
+      display: grid;
+      gap: 6px;
+      animation: rise 0.35s ease;
+    }
+
+    .chat-item.in {
+      border-left: 4px solid var(--accent-2);
+    }
+
+    .chat-item.out {
+      border-left: 4px solid var(--accent);
+    }
+
+    .chat-meta {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.82rem;
+      color: #555;
+    }
+
+    .chat-text {
+      font-size: 1rem;
+      line-height: 1.4;
+    }
+
+    .button-row {
+      display: grid;
+      gap: 12px;
+    }
+
+    button {
+      border: none;
+      border-radius: 999px;
+      padding: 12px 18px;
+      font-weight: 700;
+      cursor: pointer;
+      background: var(--accent);
+      color: white;
+      box-shadow: 0 10px 24px rgba(247, 108, 79, 0.35);
+      transition: transform 0.2s ease;
+    }
+
+    button.off {
+      background: #1a1a1a;
+      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.25);
+    }
+
+    button:hover {
+      transform: translateY(-2px);
+    }
+
+    @keyframes rise {
+      from {
+        opacity: 0;
+        transform: translateY(8px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes lift {
+      from {
+        opacity: 0;
+        transform: translateY(12px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @media (max-width: 900px) {
+      main {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>SiveBot Control</h1>
+    <div class="status">
+      <span class="dot" id="statusDot"></span>
+      <span id="statusText">Conectando...</span>
+    </div>
+  </header>
+
+  <main>
+    <section class="card">
+      <h2>Historial en Tiempo Real</h2>
+      <div id="chatList" class="chat-list"></div>
+    </section>
+
+    <section class="card">
+      <h2>Estado del bot</h2>
+      <div class="button-row">
+        <button id="panicButton">Apagar</button>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const chatList = document.getElementById('chatList');
+    const statusText = document.getElementById('statusText');
+    const statusDot = document.getElementById('statusDot');
+    const panicButton = document.getElementById('panicButton');
+
+    function updateStatus(isEnabled) {
+      statusText.textContent = isEnabled ? 'Bot activo' : 'Bot apagado';
+      statusDot.style.background = isEnabled ? '#1fb6a6' : '#f76c4f';
+      panicButton.textContent = isEnabled ? 'Apagar' : 'Encender';
+      panicButton.classList.toggle('off', !isEnabled);
+    }
+
+    function renderItem(item) {
+      const el = document.createElement('div');
+      el.className = `chat-item ${item.direction}`;
+      const time = new Date(item.timestamp).toLocaleTimeString();
+      el.innerHTML = `
+        <div class="chat-meta">
+          <span>${item.direction === 'in' ? 'Cliente' : 'Bot'} - ${item.phone}</span>
+          <span>${time}</span>
+        </div>
+        <div class="chat-text"></div>
+      `;
+      el.querySelector('.chat-text').textContent = item.text;
+      chatList.append(el);
+    }
+
+    async function loadHistory() {
+      const response = await fetch('/api/history');
+      if (!response.ok) {
+        statusText.textContent = 'Desconectado';
+        statusDot.style.background = '#f76c4f';
+        return;
+      }
+
+      const payload = await response.json();
+      chatList.innerHTML = '';
+      payload.history.forEach((item) => renderItem(item));
+      updateStatus(payload.isBotEnabled);
+      chatList.scrollTop = chatList.scrollHeight;
+    }
+
+    async function refreshStatus() {
+      const response = await fetch('/api/status');
+      if (!response.ok) {
+        return;
+      }
+      const payload = await response.json();
+      updateStatus(payload.isBotEnabled);
+    }
+
+    panicButton.addEventListener('click', async () => {
+      const enable = panicButton.textContent !== 'Encender';
+      const nextState = !enable;
+      const response = await fetch('/api/panic', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled: nextState })
+      });
+      if (!response.ok) {
+        alert('No se pudo actualizar el estado del bot.');
+      }
+      await refreshStatus();
+    });
+
+    loadHistory();
+    setInterval(loadHistory, 2500);
+  </script>
+</body>
+</html>
