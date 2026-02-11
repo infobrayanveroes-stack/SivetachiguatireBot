@@ -109,8 +109,12 @@ const KEYWORD_RULES = [
     reply: 'Hola. Soy el bot de Sivetachi. En que te puedo ayudar?'
   },
   {
+    keywords: ['menu', 'opciones', 'ayuda'],
+    reply: 'Opciones: 1) Precios 2) Horarios 3) Ubicacion 4) Envio 5) Catalogo 6) Agendar. Responde con el numero o la palabra.'
+  },
+  {
     keywords: ['precio', 'precios', 'costo', 'costos', 'valor', 'tarifa'],
-    reply: 'Tenemos planes y precios segun el servicio. Dime que necesitas y te paso la info.'
+    reply: 'Precios base: Diagnostico $10, Servicio basico $25, Premium $45. Dime cual te interesa.'
   },
   {
     keywords: ['horario', 'horarios', 'abren', 'abierto', 'cierran', 'cerrado'],
@@ -118,7 +122,7 @@ const KEYWORD_RULES = [
   },
   {
     keywords: ['ubicacion', 'direccion', 'donde estan', 'donde quedan'],
-    reply: 'Estamos en Guatire. Si quieres, te envio la ubicacion exacta por aqui.'
+    reply: 'Estamos en Guatire, Edo. Miranda. Si quieres, te envio la ubicacion exacta por aqui.'
   },
   {
     keywords: ['envio', 'entrega', 'delivery'],
@@ -126,11 +130,35 @@ const KEYWORD_RULES = [
   },
   {
     keywords: ['catalogo', 'productos', 'servicios'],
-    reply: 'Tenemos varios servicios. Dime que buscas y te paso el catalogo.'
+    reply: 'Servicios: Diagnostico, Mantenimiento, Instalacion, Soporte remoto. Dime cual necesitas.'
   },
   {
     keywords: ['agendar', 'cita', 'reservar'],
     reply: 'Claro, dime que dia y hora te conviene y lo agendamos.'
+  },
+  {
+    keywords: ['1', 'precios'],
+    reply: 'Precios base: Diagnostico $10, Servicio basico $25, Premium $45. Quieres detalles?'
+  },
+  {
+    keywords: ['2', 'horarios'],
+    reply: 'Horario: Lunes a viernes 9-18. Sabado 9-13.'
+  },
+  {
+    keywords: ['3', 'ubicacion'],
+    reply: 'Estamos en Guatire. Si quieres, te envio la ubicacion exacta.'
+  },
+  {
+    keywords: ['4', 'envio'],
+    reply: 'Hacemos entregas. Dime tu zona.'
+  },
+  {
+    keywords: ['5', 'catalogo'],
+    reply: 'Servicios: Diagnostico, Mantenimiento, Instalacion, Soporte remoto.'
+  },
+  {
+    keywords: ['6', 'agendar'],
+    reply: 'Indica dia y hora para agendar.'
   },
   {
     keywords: ['gracias', 'ok', 'perfecto', 'listo'],
